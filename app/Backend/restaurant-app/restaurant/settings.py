@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'restaurant',
     'restaurant.user',  
+    'restaurant.product', # add more apps as you create them
     'rest_framework',  
 ]
 

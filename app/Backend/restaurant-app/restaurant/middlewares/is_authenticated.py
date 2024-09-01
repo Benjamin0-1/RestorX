@@ -8,7 +8,7 @@ SECRET_KEY = settings.SECRET_KEY
 
 def jwt_required(view_func):
     @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
+    def _wrapped_view(request, *args, **kwargs): 
         auth_header = request.headers.get('Authorization')
         
         if not auth_header:

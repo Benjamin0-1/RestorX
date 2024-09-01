@@ -42,6 +42,8 @@ def login(request):
     data = request.data
     email = data.get('email')
     password = data.get('password')
+    ip = request.META.get('REMOTE_ADDR')
+    user_agent = request.META.get('HTTP_USER_AGENT')
     
     if not all([email, password]):
         return Response({'error': 'Missing required fields'}, status=400)
@@ -54,15 +56,25 @@ def login(request):
         return Response({'error': 'Invalid password'}, status=401)
     
     try:
-      
         login_history = LoginHistory(
             user=user, 
+            login_ip=request.META.get('REMOTE_ADDR'), 
             user_agent=request.META.get('HTTP_USER_AGENT'), 
             login_time=timezone.now()  
         )
         login_history.save()
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+    
+    if not user.is_active:
+        return Response({'error': 'User is not active'}, status=401)
+    
+
+    login_history = LoginHistory.objects.filter(user=user) # array of loginhistory objects.
+    for history in login_history:
+        if history.login_ip != ip or history.user_agent != user_agent:
+            print('SUSPICIOUS LOGIN DETECTED')
+            #send_email_to_user(user, 'Suspicious login detected', 'There was a login from an unknown device, if this was not you, please reset your password.')
 
     access_token = create_access_token(user.id, user.email)  
     refresh_token = create_refresh_token(user.id, user.email)  
@@ -71,25 +83,6 @@ def login(request):
         'refresh': refresh_token,
         'access': access_token,
     })
-
-@api_view(['GET'])
-def view_login_history(request):
-    token = request.headers.get('Authorization', '').replace('Bearer ', '')
-    user_id, _ = get_user_from_jwt(token)
-    user = User.objects.filter(id=user_id).first()
-
-    if not user:
-        return Response({'error': 'User not found'}, status=404)
-
-    try:
-        login_history = LoginHistory.objects.filter(user=user)
-        history_data = [{
-            'timestamp': lh.timestamp,
-            'user_agent': lh.user_agent,
-        } for lh in login_history]
-        return Response({'login_history': history_data}, status=200)
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
 
 @api_view(['PUT'])
 def change_password(request):
@@ -141,7 +134,20 @@ def refresh_access_token(request):
 
 
     
+@api_view(['GET'])
+@jwt_required
+def view_login_history(request):
+    user_login_history = LoginHistory.objects.filter(user=request.user) 
+    if not user_login_history or len(user_login_history) == 0:
+        return Response({'error': 'No login history found'}, status=404)
+    response_data = []
+    for history in user_login_history:
+        response_data.append({
+            'login_time': history.login_time,
+            'user_agent': history.user_agent
+        })
 
+    return Response({'login_history': response_data}, status=200)
 
 @api_view(['GET'])
 @jwt_required

@@ -63,11 +63,21 @@ class User(models.Model):
 
 class LoginHistory(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='login_histories')
+    login_ip = models.GenericIPAddressField(null=True, default='0.0.0.0')
     login_time = models.DateTimeField(auto_now_add=True)
     user_agent = models.CharField(max_length=255)
 
     def __str__(self):
         return f"LoginHistory of {self.user.email} at {self.login_time}"
+    
+class AuditLog(models.Model): 
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='audit_logs')  # user.audit_logs.all()
+    action = models.CharField(max_length=255) # example: User created, User updated, User deleted, Plate created, Plate updated, Plate deleted
+    action_time = models.DateTimeField(auto_now_add=True)
+    action_ip = models.GenericIPAddressField(null=True, default='0.0.0.0') 
+
+    def __str__(self):
+        return f"AuditLog: {self.action} by {self.user.email} at {self.action_time}"
 
 class Token(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tokens')

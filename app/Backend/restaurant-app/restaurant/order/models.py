@@ -1,6 +1,7 @@
 from django.db import models
 from restaurant.product.models import ProductVariant
 from django.contrib.auth.models import User
+from datetime import datetime
 
 
 ''''
@@ -62,6 +63,7 @@ class Order(models.Model):
     ], default='pending')
     created_at = models.DateTimeField(auto_now_add=True) # this should be set when the order is created/payed.
     updated_at = models.DateTimeField(auto_now=True) # this should be updated when the status changes.
+    time_to_eat = models.DateTimeField(null=True, default=datetime.now) # example: 2021-08-01 12:00:00 . if not provided, default to now.
     
     def save(self, *args, **kwargs):  
         if self.status.lower() == 'completed' and self.pk and Order.objects.get(pk=self.pk).status != 'completed':
